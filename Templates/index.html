@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>System Monitoring Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #f4f6f9;
+            text-align: center;
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 32px;
+            margin-bottom: 30px;
+        }
+
+        .dashboard {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 40px;
+        }
+
+        .gauge-container {
+            width: 400px;
+            height: 400px;
+            background-color: white;
+            border-radius: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>System Monitoring Dashboard</h1>
+    <div class="dashboard">
+        <div id="cpu-gauge" class="gauge-container"></div>
+        <div id="mem-gauge" class="gauge-container"></div>
+    </div>
+
+    <script>
+        function createGauge(id, title, value) {
+            return {
+                type: "indicator",
+                mode: "gauge+number+delta",
+                value: value,
+                title: { text: title, font: { size: 24 } },
+                delta: { reference: 50, increasing: { color: "red" }, decreasing: { color: "green" } },
+                gauge: {
+                    axis: { range: [0, 100], tickwidth: 1, tickcolor: "darkgray" },
+                    bar: { color: "#1f77b4" },
+                    bgcolor: "white",
+                    borderwidth: 2,
+                    bordercolor: "gray",
+                    steps: [
+                        { range: [0, 50], color: "#d9f0a3" },
+                        { range: [50, 85], color: "#ffe58f" },
+                        { range: [85, 100], color: "#ff6b6b" }
+                    ],
+                    threshold: {
+                        line: { color: "red", width: 4 },
+                        thickness: 0.75,
+                        value: value
+                    }
+                }
+            };
+        }
+
+        async function fetchMetricsAndUpdate() {
+            try {
+                const response = await fetch('/metrics');
+                const data = await response.json();
+
+                const cpuGauge = createGauge("cpu-gauge", "CPU Usage (%)", data.cpu);
+                const memGauge = createGauge("mem-gauge", "Memory Usage (%)", data.mem);
+
+                Plotly.react('cpu-gauge', [cpuGauge], { margin: { t: 50, b: 0 } });
+                Plotly.react('mem-gauge', [memGauge], { margin: { t: 50, b: 0 } });
+
+            } catch (err) {
+                console.error("Error fetching metrics:", err);
+            }
+        }
+
+        fetchMetricsAndUpdate();
+        setInterval(fetchMetricsAndUpdate, 2000);
+    </script>
+
+</body>
+</html>
