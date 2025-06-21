@@ -1,4 +1,3 @@
-# monitoring-app
 ## Cloud Native Resource Monitoring Python App on K8s!
 #### Python and How to create Monitoring Application in Python using Flask and psutil
 1) How to run a Python App locally.
