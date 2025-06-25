@@ -3,132 +3,628 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>System Monitoring Dashboard</title>
-    <!-- Updated Plotly CDN link to a more specific version to avoid warnings -->
+    <title>System Health Monitor</title>
     <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
     <style>
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background-color: #f4f6f9;
-            text-align: center;
-            padding: 20px;
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
             margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-bg: #0a0e1a;
+            --secondary-bg: #1a1f2e;
+            --card-bg: #242b3d;
+            --accent-color: #00d4ff;
+            --success-color: #00ff88;
+            --warning-color: #ffa500;
+            --danger-color: #ff4757;
+            --text-primary: #ffffff;
+            --text-secondary: #94a3b8;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            --glow: 0 0 20px rgba(0, 212, 255, 0.3);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, var(--primary-bg) 0%, var(--secondary-bg) 100%);
+            color: var(--text-primary);
             min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
         }
 
-        h1 {
-            font-size: 32px;
-            margin-bottom: 30px;
-            color: #333;
+        /* Animated background particles */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(0, 212, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(0, 255, 136, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(255, 71, 87, 0.1) 0%, transparent 50%);
+            animation: float 20s ease-in-out infinite;
+            pointer-events: none;
+            z-index: -1;
         }
 
-        .dashboard {
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            33% { transform: translateY(-20px) rotate(2deg); }
+            66% { transform: translateY(10px) rotate(-1deg); }
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-color), var(--success-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1rem;
+            text-shadow: 0 0 30px rgba(0, 212, 255, 0.5);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            font-weight: 300;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            padding: 0.5rem 1rem;
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid var(--success-color);
+            border-radius: 50px;
+            font-size: 0.9rem;
+            color: var(--success-color);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--success-color);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .metric-card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--glow), var(--shadow);
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-color), var(--success-color));
+            opacity: 0.8;
+        }
+
+        .card-header {
             display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .card-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent-color), var(--success-color));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
             justify-content: center;
-            flex-wrap: wrap;
-            gap: 40px;
-            width: 100%; /* Ensure dashboard takes full width */
-            max-width: 1200px; /* Limit max width for larger screens */
+            font-size: 1.5rem;
         }
 
         .gauge-container {
-            width: 400px;
-            height: 400px;
-            background-color: white;
-            border-radius: 20px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-            display: flex; /* Use flex to center plotly chart if needed */
-            justify-content: center;
-            align-items: center;
-            flex-grow: 1; /* Allow containers to grow */
-            max-width: 45%; /* Max width for two columns on larger screens */
-            min-width: 300px; /* Minimum width for smaller screens */
+            height: 300px;
+            margin: 1rem 0;
         }
 
-        /* Responsive adjustments */
+        .metric-details {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .detail-item {
+            text-align: center;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        .detail-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--accent-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .detail-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .info-card {
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 15px;
+            border: 1px solid var(--border-color);
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .info-card:hover {
+            transform: scale(1.02);
+            border-color: var(--accent-color);
+        }
+
+        .info-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            opacity: 0.8;
+        }
+
+        .info-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .info-description {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 2rem 0;
+            border-top: 1px solid var(--border-color);
+            margin-top: 3rem;
+        }
+
+        .footer p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Loading animation */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border-color);
+            border-top: 3px solid var(--accent-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive design */
         @media (max-width: 768px) {
-            .gauge-container {
-                width: 100%; /* Full width on smaller screens */
-                max-width: none;
+            .container {
+                padding: 1rem;
             }
+            
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+            
+            .metric-card {
+                padding: 1.5rem;
+            }
+            
+            .metric-details {
+                grid-template-columns: 1fr;
+                gap: 0.8rem;
+            }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--primary-bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--accent-color);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--success-color);
         }
     </style>
 </head>
 <body>
+    <div class="container">
+        <div class="header">
+            <h1>System Health Monitor</h1>
+            <div class="status-indicator">
+                <div class="status-dot"></div>
+                <span>System Online</span>
+            </div>
+        </div>
 
-    <h1>System Monitoring Dashboard</h1>
-    <div class="dashboard">
-        <div id="cpu-gauge" class="gauge-container"></div>
-        <div id="mem-gauge" class="gauge-container"></div>
+        <div class="dashboard-grid">
+            <div class="metric-card">
+                <div class="card-header">
+                    <h3 class="card-title">CPU Usage</h3>
+                    <div class="card-icon">🖥️</div>
+                </div>
+                <div id="cpu-gauge" class="gauge-container">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+                <div class="metric-details">
+                    <div class="detail-item">
+                        <div class="detail-value" id="cpu-current">--</div>
+                        <div class="detail-label">Current</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-value" id="cpu-avg">--</div>
+                        <div class="detail-label">Average</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-value" id="cpu-status">Good</div>
+                        <div class="detail-label">Status</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="card-header">
+                    <h3 class="card-title">Memory Usage</h3>
+                    <div class="card-icon">💾</div>
+                </div>
+                <div id="mem-gauge" class="gauge-container">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+                <div class="metric-details">
+                    <div class="detail-item">
+                        <div class="detail-value" id="mem-current">--</div>
+                        <div class="detail-label">Current</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-value" id="mem-avg">--</div>
+                        <div class="detail-label">Average</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-value" id="mem-status">Good</div>
+                        <div class="detail-label">Status</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!--<div class="info-grid">
+            <div class="info-card">
+                <div class="info-icon">⚡</div>
+                <h4 class="info-title">Real-time Updates</h4>
+                <p class="info-description">Metrics update every 2 seconds for real-time monitoring</p>
+            </div>
+            <div class="info-card">
+                <div class="info-icon">📊</div>
+                <h4 class="info-title">Performance Tracking</h4>
+                <p class="info-description">Track CPU and memory usage with visual gauges</p>
+            </div>
+            <div class="info-card">
+                <div class="info-icon">🎯</div>
+                <h4 class="info-title">Smart Alerts</h4>
+                <p class="info-description">Color-coded status indicators for quick assessment</p>
+            </div>
+            <div class="info-card">
+                <div class="info-icon">📱</div>
+                <h4 class="info-title">Responsive Design</h4>
+                <p class="info-description">Optimized for desktop, tablet, and mobile devices</p>
+            </div>
+        </div> -->
+
+        <div class="footer">
+            <p>System Health Monitor • Last updated: <span id="last-updated">--</span></p>
+        </div>
     </div>
 
     <script>
-        // Function to create or update a Plotly gauge chart
-        function createGauge(id, title, value) {
-            // Plotly data structure for an indicator (gauge)
+        // Store historical data for averages
+        let cpuHistory = [];
+        let memHistory = [];
+        const maxHistorySize = 30; // Keep last 30 readings for average
+
+        // Function to create enhanced gauge with custom styling
+        function createEnhancedGauge(title, value, type) {
+            const colors = {
+                cpu: {
+                    low: '#00ff88',    // Green
+                    medium: '#ffa500', // Orange  
+                    high: '#ff4757'    // Red
+                },
+                mem: {
+                    low: '#00d4ff',    // Cyan
+                    medium: '#ffa500', // Orange
+                    high: '#ff4757'    // Red
+                }
+            };
+
+            const colorSet = colors[type] || colors.cpu;
+            
             return {
                 type: "indicator",
-                mode: "gauge+number+delta", // Display gauge, current value, and delta from reference
-                value: value, // Current value to display
-                title: { text: title, font: { size: 24 } }, // Title of the gauge
-                delta: { reference: 50, increasing: { color: "red" }, decreasing: { color: "green" } }, // Delta comparison
+                mode: "gauge+number",
+                value: value,
+                title: { 
+                    text: title, 
+                    font: { 
+                        size: 20, 
+                        color: '#ffffff',
+                        family: 'Inter'
+                    } 
+                },
+                number: {
+                    font: {
+                        size: 48,
+                        color: '#ffffff',
+                        family: 'Inter'
+                    },
+                    suffix: "%"
+                },
                 gauge: {
-                    axis: { range: [0, 100], tickwidth: 1, tickcolor: "darkgray" }, // Axis range and styling
-                    bar: { color: "#1f77b4" }, // Color of the gauge bar
-                    bgcolor: "white", // Background color of the gauge
-                    borderwidth: 2, // Border width of the gauge
-                    bordercolor: "gray", // Border color of the gauge
-                    steps: [ // Color ranges for the gauge
-                        { range: [0, 50], color: "#d9f0a3" }, // Green for low usage
-                        { range: [50, 85], color: "#ffe58f" }, // Yellow for medium usage
-                        { range: [85, 100], color: "#ff6b6b" } // Red for high usage
+                    axis: { 
+                        range: [0, 100], 
+                        tickwidth: 2, 
+                        tickcolor: "rgba(255,255,255,0.3)",
+                        tickfont: { color: '#94a3b8', size: 14 }
+                    },
+                    bar: { 
+                        color: value < 50 ? colorSet.low : value < 80 ? colorSet.medium : colorSet.high,
+                        thickness: 0.8
+                    },
+                    bgcolor: "rgba(255,255,255,0.05)",
+                    borderwidth: 2,
+                    bordercolor: "rgba(255,255,255,0.1)",
+                    steps: [
+                        { range: [0, 50], color: "rgba(0,255,136,0.1)" },
+                        { range: [50, 80], color: "rgba(255,165,0,0.1)" },
+                        { range: [80, 100], color: "rgba(255,71,87,0.1)" }
                     ],
-                    threshold: { // Threshold line
-                        line: { color: "red", width: 4 },
+                    threshold: {
+                        line: { color: value > 90 ? colorSet.high : "transparent", width: 4 },
                         thickness: 0.75,
-                        value: value // Initial threshold value (can be dynamic if needed)
+                        value: 90
                     }
                 }
             };
         }
 
-        // Asynchronous function to fetch metrics from the Flask backend and update the dashboard
+        // Function to calculate average from history
+        function calculateAverage(history) {
+            if (history.length === 0) return 0;
+            const sum = history.reduce((a, b) => a + b, 0);
+            return (sum / history.length).toFixed(1);
+        }
+
+        // Function to get status based on value
+        function getStatus(value) {
+            if (value < 50) return { text: 'Good', color: '#00ff88' };
+            if (value < 80) return { text: 'Warning', color: '#ffa500' };
+            return { text: 'Critical', color: '#ff4757' };
+        }
+
+        // Function to update detail cards
+        function updateDetailCards(cpuValue, memValue) {
+            // Update CPU details
+            document.getElementById('cpu-current').textContent = cpuValue.toFixed(1) + '%';
+            document.getElementById('cpu-avg').textContent = calculateAverage(cpuHistory) + '%';
+            const cpuStatus = getStatus(cpuValue);
+            const cpuStatusEl = document.getElementById('cpu-status');
+            cpuStatusEl.textContent = cpuStatus.text;
+            cpuStatusEl.style.color = cpuStatus.color;
+
+            // Update Memory details
+            document.getElementById('mem-current').textContent = memValue.toFixed(1) + '%';
+            document.getElementById('mem-avg').textContent = calculateAverage(memHistory) + '%';
+            const memStatus = getStatus(memValue);
+            const memStatusEl = document.getElementById('mem-status');
+            memStatusEl.textContent = memStatus.text;
+            memStatusEl.style.color = memStatus.color;
+
+            // Update last updated time
+            document.getElementById('last-updated').textContent = new Date().toLocaleTimeString();
+        }
+
+        // Function to hide loading spinners
+        function hideLoadingSpinners() {
+            const loadingElements = document.querySelectorAll('.loading');
+            loadingElements.forEach(element => {
+                element.style.display = 'none';
+            });
+        }
+
+        // Enhanced fetch function with error handling and animations
         async function fetchMetricsAndUpdate() {
             try {
-                // Fetch data from the /metrics endpoint
                 const response = await fetch('/metrics');
-                // Check if the response is OK (status code 200)
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                // Parse the JSON response
+                
                 const data = await response.json();
+                
+                // Hide loading spinners on first successful load
+                hideLoadingSpinners();
+                
+                // Add to history and maintain size limit
+                cpuHistory.push(data.cpu);
+                memHistory.push(data.mem);
+                
+                if (cpuHistory.length > maxHistorySize) {
+                    cpuHistory.shift();
+                    memHistory.shift();
+                }
 
-                // Create or update CPU gauge data
-                const cpuGauge = createGauge("cpu-gauge", "CPU Usage (%)", data.cpu);
-                // Create or update Memory gauge data
-                const memGauge = createGauge("mem-gauge", "Memory Usage (%)", data.mem);
+                // Create enhanced gauges
+                const cpuGauge = createEnhancedGauge("CPU Usage", data.cpu, 'cpu');
+                const memGauge = createEnhancedGauge("Memory Usage", data.mem, 'mem');
 
-                // Update the Plotly charts. Plotly.react is efficient for updates.
-                Plotly.react('cpu-gauge', [cpuGauge], { margin: { t: 50, b: 0 } });
-                Plotly.react('mem-gauge', [memGauge], { margin: { t: 50, b: 0 } });
+                // Layout configuration for dark theme
+                const layout = {
+                    paper_bgcolor: 'transparent',
+                    plot_bgcolor: 'transparent',
+                    font: { family: 'Inter', color: '#ffffff' },
+                    margin: { t: 60, b: 20, l: 20, r: 20 },
+                    showlegend: false
+                };
 
-            } catch (err) {
-                // Log any errors that occur during fetching or updating
-                console.error("Error fetching metrics:", err);
-                // You could also update a status message on the dashboard here
+                // Update charts with smooth transitions
+                const config = { 
+                    displayModeBar: false, 
+                    responsive: true,
+                    staticPlot: false
+                };
+
+                Plotly.react('cpu-gauge', [cpuGauge], layout, config);
+                Plotly.react('mem-gauge', [memGauge], layout, config);
+
+                // Update detail cards
+                updateDetailCards(data.cpu, data.mem);
+
+                console.log(`Metrics updated - CPU: ${data.cpu}%, Memory: ${data.mem}%`);
+
+            } catch (error) {
+                console.error("Error fetching metrics:", error);
+                
+                // Hide loading spinners even on error
+                hideLoadingSpinners();
+                
+                // Show error state in gauges
+                const errorGauge = {
+                    type: "indicator",
+                    mode: "gauge+number",
+                    value: 0,
+                    title: { text: "Connection Error", font: { size: 18, color: '#ff4757' } },
+                    gauge: {
+                        bar: { color: '#ff4757' },
+                        bgcolor: "rgba(255,71,87,0.1)",
+                        bordercolor: "#ff4757"
+                    }
+                };
+                
+                const errorLayout = {
+                    paper_bgcolor: 'transparent',
+                    plot_bgcolor: 'transparent',
+                    margin: { t: 60, b: 20, l: 20, r: 20 }
+                };
+                
+                Plotly.react('cpu-gauge', [errorGauge], errorLayout);
+                Plotly.react('mem-gauge', [errorGauge], errorLayout);
             }
         }
 
-        // Call the function immediately to populate the dashboard on load
-        fetchMetricsAndUpdate();
-        // Set an interval to refresh the metrics every 2 seconds (2000 milliseconds)
-        setInterval(fetchMetricsAndUpdate, 2000);
-    </script>
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('System Health Monitor initialized');
+            fetchMetricsAndUpdate();
+            setInterval(fetchMetricsAndUpdate, 2000);
+        });
 
+        // Add some interactivity - click to refresh
+        document.querySelectorAll('.metric-card').forEach(card => {
+            card.addEventListener('click', function() {
+                console.log('Manual refresh triggered');
+                fetchMetricsAndUpdate();
+            });
+        });
+    </script>
 </body>
 </html>
