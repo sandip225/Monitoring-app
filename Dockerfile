@@ -13,7 +13,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy all app files including templates
 COPY . .
-
+#knfhoehvnsdmvbdsvbdclvcl v
 EXPOSE 5000
 
 CMD ["python", "app.py"]
