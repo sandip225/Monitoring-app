@@ -2,19 +2,27 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>System Monitoring Dashboard</title>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <!-- Updated Plotly CDN link to a more specific version to avoid warnings -->
+    <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
     <style>
         body {
             font-family: 'Segoe UI', sans-serif;
             background-color: #f4f6f9;
             text-align: center;
             padding: 20px;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
         }
 
         h1 {
             font-size: 32px;
             margin-bottom: 30px;
+            color: #333;
         }
 
         .dashboard {
@@ -22,6 +30,8 @@
             justify-content: center;
             flex-wrap: wrap;
             gap: 40px;
+            width: 100%; /* Ensure dashboard takes full width */
+            max-width: 1200px; /* Limit max width for larger screens */
         }
 
         .gauge-container {
@@ -31,6 +41,20 @@
             border-radius: 20px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             padding: 20px;
+            display: flex; /* Use flex to center plotly chart if needed */
+            justify-content: center;
+            align-items: center;
+            flex-grow: 1; /* Allow containers to grow */
+            max-width: 45%; /* Max width for two columns on larger screens */
+            min-width: 300px; /* Minimum width for smaller screens */
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .gauge-container {
+                width: 100%; /* Full width on smaller screens */
+                max-width: none;
+            }
         }
     </style>
 </head>
@@ -43,50 +67,66 @@
     </div>
 
     <script>
+        // Function to create or update a Plotly gauge chart
         function createGauge(id, title, value) {
+            // Plotly data structure for an indicator (gauge)
             return {
                 type: "indicator",
-                mode: "gauge+number+delta",
-                value: value,
-                title: { text: title, font: { size: 24 } },
-                delta: { reference: 50, increasing: { color: "red" }, decreasing: { color: "green" } },
+                mode: "gauge+number+delta", // Display gauge, current value, and delta from reference
+                value: value, // Current value to display
+                title: { text: title, font: { size: 24 } }, // Title of the gauge
+                delta: { reference: 50, increasing: { color: "red" }, decreasing: { color: "green" } }, // Delta comparison
                 gauge: {
-                    axis: { range: [0, 100], tickwidth: 1, tickcolor: "darkgray" },
-                    bar: { color: "#1f77b4" },
-                    bgcolor: "white",
-                    borderwidth: 2,
-                    bordercolor: "gray",
-                    steps: [
-                        { range: [0, 50], color: "#d9f0a3" },
-                        { range: [50, 85], color: "#ffe58f" },
-                        { range: [85, 100], color: "#ff6b6b" }
+                    axis: { range: [0, 100], tickwidth: 1, tickcolor: "darkgray" }, // Axis range and styling
+                    bar: { color: "#1f77b4" }, // Color of the gauge bar
+                    bgcolor: "white", // Background color of the gauge
+                    borderwidth: 2, // Border width of the gauge
+                    bordercolor: "gray", // Border color of the gauge
+                    steps: [ // Color ranges for the gauge
+                        { range: [0, 50], color: "#d9f0a3" }, // Green for low usage
+                        { range: [50, 85], color: "#ffe58f" }, // Yellow for medium usage
+                        { range: [85, 100], color: "#ff6b6b" } // Red for high usage
                     ],
-                    threshold: {
+                    threshold: { // Threshold line
                         line: { color: "red", width: 4 },
                         thickness: 0.75,
-                        value: value
+                        value: value // Initial threshold value (can be dynamic if needed)
                     }
                 }
             };
         }
 
+        // Asynchronous function to fetch metrics from the Flask backend and update the dashboard
         async function fetchMetricsAndUpdate() {
             try {
+                // Fetch data from the /metrics endpoint
                 const response = await fetch('/metrics');
+                // Check if the response is OK (status code 200)
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                // Parse the JSON response
                 const data = await response.json();
 
+                // Create or update CPU gauge data
                 const cpuGauge = createGauge("cpu-gauge", "CPU Usage (%)", data.cpu);
+                // Create or update Memory gauge data
                 const memGauge = createGauge("mem-gauge", "Memory Usage (%)", data.mem);
 
+                // Update the Plotly charts. Plotly.react is efficient for updates.
                 Plotly.react('cpu-gauge', [cpuGauge], { margin: { t: 50, b: 0 } });
                 Plotly.react('mem-gauge', [memGauge], { margin: { t: 50, b: 0 } });
 
             } catch (err) {
+                // Log any errors that occur during fetching or updating
                 console.error("Error fetching metrics:", err);
+                // You could also update a status message on the dashboard here
             }
         }
 
+        // Call the function immediately to populate the dashboard on load
         fetchMetricsAndUpdate();
+        // Set an interval to refresh the metrics every 2 seconds (2000 milliseconds)
         setInterval(fetchMetricsAndUpdate, 2000);
     </script>
 
